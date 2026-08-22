@@ -1,16 +1,6 @@
 // fetch-amber.js
 // Poll active "Child Abduction Emergency" (AMBER) alerts from the NWS API
 // and write a compact static JSON file for TRMNL.
-//
-// Trigger: GitHub Actions, called by cron-job.org every 15-30 min (same
-// pattern as Geek Almanac / Souvenir Map / Ciné Poster).
-//
-// Output: ./docs/amber-alerts.json  (served via GitHub Pages)
-//
-// QR / "official page" design note: no info is self-hosted. Each alert
-// links to either (a) a URL found embedded in the bulletin's own text
-// (most specific, straight from the issuing agency), or (b) the NCMEC
-// clearinghouse page, which always lists current active US AMBER Alerts.
 
 import fs from "node:fs";
 
@@ -20,7 +10,7 @@ const NWS_URL =
 const OUTPUT_DIR = "./docs";
 const OUTPUT_PATH = `${OUTPUT_DIR}/amber-alerts.json`;
 
-const MAX_DESCRIPTION_LEN = 320;
+const MAX_DESCRIPTION_LEN = 900;
 const MAX_INSTRUCTION_LEN = 250;
 const MAX_AREA_LEN = 180;
 
@@ -35,20 +25,16 @@ function truncate(s, n) {
   return s.length > n ? s.slice(0, n - 1).trim() + "\u2026" : s;
 }
 
-// areaDesc like "Dallas, TX; Tarrant, TX" -> first state code
 function extractState(areaDesc) {
   const m = (areaDesc || "").match(/,\s*([A-Z]{2})\b/);
   return m ? m[1] : "";
 }
 
-// First phone-like sequence in the text, default to 911 if none found
 function extractPhone(text) {
   const m = (text || "").match(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
   return m ? m[0] : "911";
 }
 
-// If the bulletin itself contains a URL, that's the most specific and most
-// official destination. Otherwise fall back to the NCMEC clearinghouse.
 function resolveOfficialUrl(description, instruction) {
   const combined = `${description} ${instruction}`;
   const urlMatch = combined.match(/https?:\/\/[^\s)]+/i);
