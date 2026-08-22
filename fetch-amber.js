@@ -20,7 +20,7 @@ const NWS_URL =
 const OUTPUT_DIR = "./docs";
 const OUTPUT_PATH = `${OUTPUT_DIR}/amber-alerts.json`;
 
-const MAX_DESCRIPTION_LEN = 500;
+const MAX_DESCRIPTION_LEN = 320;
 const MAX_INSTRUCTION_LEN = 250;
 const MAX_AREA_LEN = 180;
 
