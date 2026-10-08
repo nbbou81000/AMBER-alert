@@ -1,87 +1,124 @@
-# TRMNL AMBER Alerts (USA)
+# AMBER Alerts USA — TRMNL plugin
 
-Polls active US AMBER Alerts from the NWS API and displays them on a TRMNL
-e-ink device, filterable by state. No self-hosted detail page — QR codes
-point to embedded URLs in the bulletin or to missingkids.org.
+**Live U.S. AMBER Alerts on your TRMNL e-ink display, nationwide or for the states you choose, with a QR code to the official information.**
 
-Everything below is done through the GitHub website and the TRMNL website.
-No terminal, no local install.
+[![Install on TRMNL](https://img.shields.io/badge/TRMNL-Install%20recipe-black?style=flat-square)](https://trmnl.com/recipes/453038)
+![Source](https://img.shields.io/badge/source-National%20Weather%20Service-blue?style=flat-square)
+![Updates](https://img.shields.io/badge/updates-every%2020%20min-orange?style=flat-square)
+![No API key](https://img.shields.io/badge/API%20key-none-brightgreen?style=flat-square)
 
-## 1. Create the repo (github.com)
+![AMBER Alerts USA on a TRMNL display](https://trmnl-public.s3.us-east-2.amazonaws.com/jq3z5tgg0henydnq4zkxqrr5o5po)
 
-1. Go to github.com → **New repository** → name it `trmnl-amber-alerts` → **Public** → Create.
-2. On the new repo page, click **Add file → Upload files**.
-3. Drag in every file from this package, **keeping the folder structure**:
-   - `fetch-amber.js`
-   - `package.json`
-   - `.github/workflows/fetch.yml`
-   - `docs/amber-alerts.json`
-   - (keep `settings.yml` and the 4 `.liquid` files aside — those go into TRMNL directly in step 4, not into the repo)
-4. Commit directly to `main`.
+---
 
-## 2. Enable GitHub Pages
+## What it does
 
-1. Repo → **Settings → Pages**.
-2. Source: **Deploy from a branch**.
-3. Branch: `main`, folder: `/docs`. Save.
-4. Your JSON will be live at:
-   `https://YOUR-USERNAME.github.io/trmnl-amber-alerts/amber-alerts.json`
+When a child abduction alert is active, the screen shows it: state, affected areas, the bulletin text, the phone number to call, and a QR code to the official page.
 
-## 3. Run the fetch workflow
+When no alert is active — which is most of the time — the screen says so plainly.
 
-1. Repo → **Actions** tab → you should see "Fetch AMBER Alerts".
-2. If Actions are disabled, click the banner to enable them.
-3. Click **Run workflow** once manually to confirm it works — check the run
-   log, then open the Pages URL above to confirm the JSON updated (it won't
-   change contents unless there's an active alert, but the `generated_at`
-   timestamp should move off `1970-01-01`).
-4. The workflow also has a built-in `schedule: cron` (every 20 min), so it
-   runs on its own — you don't strictly need cron-job.org for this one,
-   though you can still point cron-job.org at the GitHub API to trigger
-   `workflow_dispatch` if you want tighter timing than GitHub's schedule
-   (which can drift a few minutes under load).
+An e-ink screen on a wall or a desk is seen many times a day. That is exactly the kind of attention AMBER Alerts rely on.
 
-## 4. Create the TRMNL plugin (trmnl.com / editor.trmnl.com)
+## Settings
 
-1. **Create Private Plugin**.
-2. Open `settings.yml` from this package, copy its contents into the
-   plugin's settings screen — replace `YOUR-USERNAME` in `polling_url`
-   with your actual GitHub username.
-3. Copy each `.liquid` file into its matching tab:
-   - `full.liquid` → **Full**
-   - `half_horizontal.liquid` → **Half horizontal**
-   - `half_vertical.liquid` → **Half vertical**
-   - `quadrant.liquid` → **Quadrant**
-4. In the **Data** tab, paste a sample JSON (0/1/5 alerts) to preview
-   before a real alert ever fires. Example for "5 alerts":
+| Setting | Example | Notes |
+|---|---|---|
+| **States to watch** | `TX,OH,FL` | Two-letter state codes, comma-separated. Leave empty for nationwide mode. |
 
-   ```json
-   {
-     "generated_at": "2026-08-22T12:00:00Z",
-     "count": 5,
-     "alerts": [
-       { "state": "TX", "headline": "AMBER Alert — Dallas County", "description": "Sample.", "phone": "911", "official_url": "https://www.missingkids.org/gethelpnow/amber", "sent": "2026-08-22T11:00:00Z" },
-       { "state": "OH", "headline": "AMBER Alert — Franklin County", "description": "Sample.", "phone": "911", "official_url": "https://www.missingkids.org/gethelpnow/amber", "sent": "2026-08-22T11:00:00Z" },
-       { "state": "FL", "headline": "AMBER Alert — Miami-Dade County", "description": "Sample.", "phone": "911", "official_url": "https://www.missingkids.org/gethelpnow/amber", "sent": "2026-08-22T11:00:00Z" },
-       { "state": "AZ", "headline": "AMBER Alert — Maricopa County", "description": "Sample.", "phone": "911", "official_url": "https://www.missingkids.org/gethelpnow/amber", "sent": "2026-08-22T11:00:00Z" },
-       { "state": "NC", "headline": "AMBER Alert — Wake County", "description": "Sample.", "phone": "911", "official_url": "https://www.missingkids.org/gethelpnow/amber", "sent": "2026-08-22T11:00:00Z" }
-     ]
-   }
-   ```
+Works in all four TRMNL layouts: Full, Half horizontal, Half vertical and Quadrant.
 
-5. Add the plugin to a device/playlist, and set the **"States to watch"**
-   custom field (e.g. `TX,OH,FL`) or leave it empty for national mode.
+## Installation
 
-## Files in this package
+1. Open the recipe page: **[trmnl.com/recipes/453038](https://trmnl.com/recipes/453038)**
+2. Click **Install**, enter your states (or leave empty), and add it to a playlist.
 
-| File | Goes to |
+No account, no API key.
+
+---
+
+## How it works
+
+```
+NWS API (Child Abduction Emergency) ──► GitHub Actions (every 20 min) ──► docs/amber-alerts.json ──► GitHub Pages ──► TRMNL
+```
+
+AMBER Alerts are relayed by the National Weather Service as *Child Abduction Emergency* events. `fetch-amber.js` reads them from the public NWS endpoint:
+
+```
+https://api.weather.gov/alerts/active?event=Child%20Abduction%20Emergency
+```
+
+For each alert it:
+
+- extracts the **state** from the affected areas;
+- cleans and truncates the bulletin (900 characters), instructions (250) and areas (180) to fit an e-ink screen;
+- extracts the **phone number** to call from the text, falling back to `911`;
+- finds the **official link** embedded in the bulletin, falling back to [missingkids.org](https://www.missingkids.org/gethelpnow/amber) — this is what the QR code points to;
+- sorts alerts from newest to oldest.
+
+There is no self-hosted detail page: the QR code always leads to an official source.
+
+### Data endpoint
+
+`https://nbbou81000.github.io/AMBER-alert/amber-alerts.json`
+
+```json
+{
+  "generated_at": "2026-10-08T07:25:37Z",
+  "count": 1,
+  "alerts": [
+    {
+      "id": "urn:oid:…",
+      "state": "CA",
+      "areas": "Alameda, CA, Santa Clara, CA",
+      "headline": "AMBER Alert",
+      "description": "…",
+      "instruction": "…",
+      "phone": "911",
+      "official_url": "https://www.missingkids.org/gethelpnow/amber",
+      "sent": "…",
+      "expires": "…"
+    }
+  ]
+}
+```
+
+`docs/amber-alerts-1.json` and `docs/amber-alerts-2.json` are sample files with fictional alerts, used to test the layouts when no real alert is active.
+
+---
+
+## Repository layout
+
+| Path | Role |
 |---|---|
-| `fetch-amber.js` | GitHub repo root |
-| `package.json` | GitHub repo root |
-| `.github/workflows/fetch.yml` | GitHub repo, exact path |
-| `docs/amber-alerts.json` | GitHub repo, exact path (seed file) |
-| `settings.yml` | Pasted into TRMNL plugin settings |
-| `full.liquid` | Pasted into TRMNL "Full" tab |
-| `half_horizontal.liquid` | Pasted into TRMNL "Half horizontal" tab |
-| `half_vertical.liquid` | Pasted into TRMNL "Half vertical" tab |
-| `quadrant.liquid` | Pasted into TRMNL "Quadrant" tab |
+| `fetch-amber.js` | Fetches active alerts from the NWS API and writes the JSON |
+| `package.json` | Node project file (no dependency) |
+| `docs/amber-alerts.json` | The JSON polled by TRMNL |
+| `docs/amber-alerts-1.json`, `docs/amber-alerts-2.json` | Test samples |
+| `.github/workflows/fetch.yml` | Runs the script every 20 minutes (and on demand) |
+
+## Run your own
+
+1. Fork the repo.
+2. **Settings › Pages**: deploy from the `main` branch, `/docs` folder.
+3. **Actions** tab: enable workflows, then **Run workflow** once. The `generated_at` date in the JSON should update.
+4. In TRMNL, point the Polling URL to `https://YOUR-USERNAME.github.io/AMBER-alert/amber-alerts.json`.
+
+## Important
+
+This plugin is an **unofficial relay** of public NWS data, refreshed every 20 minutes. It is not an emergency notification system and can miss or delay an alert. If you have information about an AMBER Alert, call **911** or the number given in the alert.
+
+## Credits
+
+- Data from the [National Weather Service API](https://www.weather.gov/documentation/services-web-api) (U.S. government, public domain).
+- Official information: [National Center for Missing & Exploited Children](https://www.missingkids.org/).
+- Not affiliated with or endorsed by the NWS or NCMEC.
+- Built for [TRMNL](https://trmnl.com).
+
+## Author
+
+Made by **Nicolas Bouteiller** — [@nbbou81000](https://github.com/nbbou81000) · nb.bouteiller@gmail.com
+
+## License
+
+MIT License — see [`LICENSE`](LICENSE).
